@@ -1,0 +1,25 @@
+{
+  "type": "array",
+  "items": [
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "group",
+        "progress"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}
