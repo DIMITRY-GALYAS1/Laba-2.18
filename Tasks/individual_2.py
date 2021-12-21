@@ -8,100 +8,105 @@ import sys
 from dotenv import load_dotenv
 
 
-def add_student(students, name, group, progress, file_name):
-    """
-    Добавление нового студента
-    """
-    students.append(
-        {
-            'name': name,
-            'group': group,
-            'progress': progress
-        }
-    )
-
-    with open(file_name, "w", encoding="utf-8") as file_out:
-        json.dump(students, file_out, ensure_ascii=False, indent=4)
-    return students
+@click.group()
+def cli():
+    pass
 
 
-def display_students(line, students):
-    """
-    Вывод списка студентов
-    """
-    print(line)
-    print(
-        '| {:^4} | {:^30} | {:^20} | {:^15} |'.format(
-            "№",
-            "Ф.И.О..",
-            "Группа",
-            "Успеваемость"
-        )
-    )
-    print(line)
-    # Вывести данные о всех студентах.
-    for idx, student in enumerate(students, 1):
-        print(
-            '| {:>4} | {:<30} | {:<20} | {:>15} |'.format(
-                idx,
-                student.get('name', ''),
-                student.get('group', ''),
-                student.get('progress', 0)
-            )
-        )
-    print(line)
-
-
-def select_students(line, undergraduates):
-    """
-    Выбор студентов
-    """
-    print(line)
-    print(
-        '| {:^4} | {:^30} | {:^20} | {:^15} |'.format(
-            "№",
-            "Ф.И.О.",
-            "Группа",
-            "Успеваемость"
-        )
-    )
-    print(line)
-
-    for pupil in undergraduates:
-        evaluations = pupil.get('progress')
-        list_of_rating = list(evaluations)
-        count = 0
-        for z in list_of_rating:
-            if z == '2':
-                count += 1
-                print(
-                    '| {:>4} | {:<30} | {:<20} | {:>15} |'.format(
-                        count,
-                        pupil.get('name', ''),
-                        pupil.get('group', ''),
-                        pupil.get('progress', 0)
-                    )
-                )
-    print(line)
-
-
-def open_file(filename):
-    with open(filename, "r", encoding="utf-8") as f_in:
-        return json.load(f_in)
-
-
-@click.command()
-@click.option("-c", "--command")
-@click.option("-d", "--data")
+@cli.command()
+@click.argument('data')
 @click.option("-n", "--name")
 @click.option("-g", "--group")
 @click.option("-p", "--progress")
-def main(command, data, name, group, progress):
+def add(data, name, group, progress):
+    """
+    Добавление нового студента
+    """
     if os.path.exists(data):
         load_dotenv()
         dotenv_path = os.getenv("STUDENTS_DATA")
         if not dotenv_path:
-            click.secho('Ошибка', fg='red')
+            click.secho('Файла нет', fg='red')
+            sys.exit(1)
+        if os.path.exists(dotenv_path):
+            students = open_file(dotenv_path)
+        else:
+            students = []
+        students.append(
+            {
+                'name': name,
+                'group': group,
+                'progress': progress
+            }
+        )
+        with open(dotenv_path, "w", encoding="utf-8") as out:
+            json.dump(students, out, ensure_ascii=False, indent=4)
+        click.secho("Студент добавлен", fg='green')
+    else:
+        click.secho('Файла нет', fg='red')
+
+
+@cli.command()
+@click.argument('filename')
+def select(filename):
+    """
+    Выбор студента по успеваемости
+    """
+    if os.path.exists(filename):
+        load_dotenv()
+        dotenv_path = os.getenv("STUDENTS_DATA")
+        if not dotenv_path:
+            click.secho('Файла нет', fg='red')
+            sys.exit(1)
+        if os.path.exists(dotenv_path):
+            students = open(dotenv_path)
+        else:
+            students = []
+        line = '+-{}-+-{}-+-{}-+-{}-+'.format(
+            '-' * 4,
+            '-' * 30,
+            '-' * 20,
+            '-' * 15
+        )
+        print(line)
+        print(
+            '| {:^4} | {:^30} | {:^20} | {:^15} |'.format(
+                "№",
+                "Ф.И.О.",
+                "Группа",
+                "Успеваемость"
+            )
+        )
+        print(line)
+        for pupil in students:
+            evaluations = pupil.get('progress', '')
+            list_of_rating = list(evaluations)
+            count = 0
+            for z in list_of_rating:
+                if z == '2':
+                    count += 1
+                    print(
+                        '| {:>4} | {:<30} | {:<20} | {:>15} |'.format(
+                            count,
+                            pupil.get('name', ''),
+                            pupil.get('group', ''),
+                            pupil.get('progress', 0)
+                        )
+                    )
+        print(line)
+
+
+@cli.command()
+@click.argument('filename')
+def display(filename):
+    """
+    Вывод списка студентов
+    """
+    if os.path.exists(filename):
+        load_dotenv()
+        dotenv_path = os.getenv("STUDENTS_DATA")
+        if not dotenv_path:
+            click.secho('Файла нет', fg='red')
             sys.exit(1)
         if os.path.exists(dotenv_path):
             students = open_file(dotenv_path)
@@ -109,19 +114,39 @@ def main(command, data, name, group, progress):
             students = []
         line = '+-{}-+-{}-+-{}-+-{}-+'.format(
             '-' * 4,
+            '-' * 30,
             '-' * 20,
-            '-' * 15,
-            '-' * 16
+            '-' * 15
         )
-        if command == 'add':
-            add_student(students, name, group, progress, dotenv_path)
-            click.secho('Студент добавлен', fg='green')
-        elif command == 'display':
-            display_students(line, students)
-        elif command == 'select':
-            select_students(line, students)
-    else:
-        click.secho('Ошибка', fg='red')
+        print(line)
+        print(
+            '| {:^4} | {:^30} | {:^20} | {:^15} |'.format(
+                "№",
+                "Ф.И.О.",
+                "Группа",
+                "Успеваемость"
+            )
+        )
+        print(line)
+        for i, pupul in enumerate(students, 1):
+            print(
+                '| {:<4} | {:<30} | {:<20} | {:<15} |'.format(
+                    i,
+                    pupul.get('name', ''),
+                    pupul.get('group', ''),
+                    pupul.get('progress', 0)
+                )
+            )
+        print(line)
+
+
+def open_file(filename):
+    with open(filename, "r", encoding="utf-8") as fin:
+        return json.load(fin)
+
+
+def main():
+    cli()
 
 
 if __name__ == '__main__':
